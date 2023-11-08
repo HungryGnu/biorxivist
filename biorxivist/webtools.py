@@ -2,6 +2,12 @@ import requests
 from urllib.parse import quote
 from bs4 import BeautifulSoup
 
+# from langchain.document_loaders import UnstructuredHTMLLoader
+# the issue with UnstructuredHTML and BSHTMLLoader is it wants a file.
+# I could play with making an in memory file but I don't want to.
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.schema.document import Document
+
 
 class BioRxiv:
     """A base class for interacting with Biorxiv."""
@@ -24,6 +30,7 @@ class BioRxivPaper(BioRxiv):
     _authors = None
     _pdf_link = None
     _paper_homepage = None
+    _langchain_docs = None
 
     def __init__(self, relative_uri, title=None):
         """An object that stores the URI and title of an object and lazy loads the full text, authors and other metrics when called.
@@ -105,6 +112,28 @@ class BioRxivPaper(BioRxiv):
         p = div.find_all("p")
         text = "\n\n".join([x.text for x in p])
         return text
+
+    @property
+    def langchain_doc(self):
+        if not self._langchain_docs:
+            self._langchain_docs = self._parse_to_langchain_docs()
+        return self._langchain_docs
+
+    def _parse_to_langchain_docs(self, chunk_size=1000, overlap=0):
+        text_splitter = CharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=overlap
+        )
+        chunks = [
+            Document(
+                page_content=x,
+                metadata={
+                    "title": self.title,
+                    "source": self.base_url + self.full_text_html_link,
+                },
+            )
+            for x in text_splitter.split_text(self.text)
+        ]
+        return chunks
 
     def find_anchor(self, tag_dict):
         """Find an anchor tag based on a dictionary of tag properties"""
