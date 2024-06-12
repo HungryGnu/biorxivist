@@ -8,6 +8,9 @@ from bs4 import BeautifulSoup
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.schema.document import Document
 
+# An Alternative would be langchains: https://python.langchain.com/v0.1/docs/integrations/document_loaders/arxiv/
+from warnings import warn
+
 
 class BioRxiv:
     """A base class for interacting with Biorxiv."""
@@ -18,6 +21,10 @@ class BioRxiv:
         self.session = requests.Session()  # a session will store cookies.
 
     def get_relative_link(self, link: str) -> requests.Response:
+        if not isinstance(link, str):
+            raise TypeError(
+                f"The link must be a string completing a valid URL not {type(link)}."
+            )
         return self.session.get(self.base_url + link)
 
 
@@ -139,12 +146,16 @@ class BioRxivPaper(BioRxiv):
         """Find an anchor tag based on a dictionary of tag properties"""
         soup = self.homepage
         anchor = soup.find("a", tag_dict)
-        return anchor["href"]
+        if anchor:
+            return anchor["href"]
+        else:
+            warn(f"Unable to locate an anchor with the tags: {tag_dict}.")
+            return None
 
-    def fetch_home_page(self):
+    def fetch_home_page(self) -> requests.Response:
         return self.get_relative_link(self.relative_uri)
 
-    def fetch_full_text_html(self):
+    def fetch_full_text_html(self) -> requests.Response:
         return self.get_relative_link(self.full_text_html_link)
 
     def parse_full_text_response(self, response: requests.Response) -> str:

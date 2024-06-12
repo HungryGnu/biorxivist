@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "biorxivist"
-version = "0.2.0"
+version = "0.2.1"
 description = "Tools to access prepublications from BioRxiv and integrate LLM tools."
 authors = ["Ted Johnson"]
 license = "MIT"
